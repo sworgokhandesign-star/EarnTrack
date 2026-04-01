@@ -6,27 +6,34 @@ service cloud.firestore {
       return request.auth != null;
     }
     
-    function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "sworgokhan.design@gmail.com" && request.auth.token.email_verified == true));
     }
 
     function isValidIncome(data) {
       return data.keys().hasAll(['userId', 'amount', 'currency', 'convertedAmount', 'client', 'type', 'date', 'createdAt']) &&
-             data.userId is string &&
-             data.amount is number &&
+             data.userId is string && data.userId == request.auth.uid &&
+             data.amount is number && data.amount > 0 &&
              data.currency is string && data.currency.size() == 3 &&
-             data.convertedAmount is number &&
-             data.client is string && data.client.size() > 0 &&
+             data.convertedAmount is number && data.convertedAmount >= 0 &&
+             data.client is string && data.client.size() > 0 && data.client.size() < 100 &&
              data.type in ['Thumbnail', 'Ads', 'Banner', 'Other'] &&
              data.date is string &&
-             data.createdAt is string;
+             data.createdAt is string &&
+             (!('notes' in data) || (data.notes is string && data.notes.size() < 500));
     }
 
     match /incomes/{incomeId} {
-      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid && isValidIncome(request.resource.data);
-      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid && request.resource.data.userId == request.auth.uid && isValidIncome(request.resource.data);
-      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAuthenticated() && isValidIncome(request.resource.data);
+      allow update: if isAuthenticated() && 
+                      (resource.data.userId == request.auth.uid || isAdmin()) && 
+                      isValidIncome(request.resource.data) &&
+                      request.resource.data.createdAt == resource.data.createdAt &&
+                      request.resource.data.userId == resource.data.userId;
+      allow delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
     }
   }
 }

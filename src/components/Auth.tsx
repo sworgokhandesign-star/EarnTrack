@@ -16,8 +16,9 @@ export default function Auth() {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
       toast.success("Welcome back!");
-    } catch (error) {
-      toast.error("Authentication failed");
+    } catch (error: any) {
+      console.error("Google Auth Error:", error);
+      toast.error(`Auth failed: ${error.code || error.message}`);
     }
   };
 

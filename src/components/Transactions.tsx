@@ -7,6 +7,21 @@ import { formatCurrency, cn } from "../lib/utils";
 import { format, parseISO } from "date-fns";
 import { toast } from "sonner";
 import ConfirmModal from "./ConfirmModal";
+import { auth } from "../lib/firebase";
+
+function handleFirestoreError(error: unknown, operationType: string, path: string | null) {
+  const errInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+    },
+    operationType,
+    path
+  }
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
 
 interface TransactionsProps {
   incomes: Income[];
@@ -18,12 +33,12 @@ export default function Transactions({ incomes, onEdit }: TransactionsProps) {
 
   const handleDelete = async () => {
     if (!deleteId) return;
+    const path = "incomes";
     try {
-      await deleteDoc(doc(db, "incomes", deleteId));
+      await deleteDoc(doc(db, path, deleteId));
       toast.success("Entry deleted successfully");
     } catch (error) {
-      console.error("Delete error:", error);
-      toast.error("Failed to delete entry. Please check permissions.");
+      handleFirestoreError(error, "delete", path);
     } finally {
       setDeleteId(null);
     }

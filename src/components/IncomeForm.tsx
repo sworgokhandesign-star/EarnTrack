@@ -8,6 +8,20 @@ import { Income, IncomeType } from "../types";
 import { toast } from "sonner";
 import { motion } from "motion/react";
 
+function handleFirestoreError(error: unknown, operationType: string, path: string | null) {
+  const errInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+    },
+    operationType,
+    path
+  }
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
+
 interface IncomeFormProps {
   onSuccess: () => void;
   editingIncome?: Income | null;
@@ -72,15 +86,27 @@ export default function IncomeForm({ onSuccess, editingIncome }: IncomeFormProps
         createdAt: editingIncome?.createdAt || new Date().toISOString(),
       };
 
+      const path = "incomes";
       if (editingIncome) {
-        await updateDoc(doc(db, "incomes", editingIncome.id), incomeData);
+        try {
+          await updateDoc(doc(db, path, editingIncome.id), incomeData);
+        } catch (error) {
+          handleFirestoreError(error, "update" as any, path);
+        }
         toast.success("Income updated!");
       } else {
-        await addDoc(collection(db, "incomes"), incomeData);
+        try {
+          await addDoc(collection(db, path), incomeData);
+        } catch (error) {
+          handleFirestoreError(error, "create" as any, path);
+        }
         toast.success("Income added!");
       }
       onSuccess();
     } catch (error) {
+      if (error instanceof Error && error.message.includes('{"error":')) {
+        throw error; // Re-throw to be caught by ErrorBoundary
+      }
       toast.error("Failed to save income");
     } finally {
       setLoading(false);
