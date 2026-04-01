@@ -1,0 +1,27 @@
+{
+  "entities": {
+    "Income": {
+      "title": "Income Entry",
+      "description": "A single income entry for a freelancer",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "The UID of the user who owns this entry" },
+        "amount": { "type": "number", "description": "Original amount in the specified currency" },
+        "currency": { "type": "string", "description": "3-letter currency code" },
+        "convertedAmount": { "type": "number", "description": "Amount converted to BDT" },
+        "client": { "type": "string", "description": "Name of the client" },
+        "type": { "type": "string", "enum": ["Thumbnail", "Ads", "Banner", "Other"] },
+        "date": { "type": "string", "format": "date-time" },
+        "notes": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "amount", "currency", "convertedAmount", "client", "type", "date", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/incomes/{incomeId}": {
+      "schema": "Income",
+      "description": "Collection of income entries"
+    }
+  }
+}
